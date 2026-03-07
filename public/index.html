@@ -100,6 +100,15 @@
       </div>
     </div>
 
+    <!-- SETTINGS BUTTON (bottom of sidebar) -->
+    <div class="sidebar-settings-btn" onclick="openSettings()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span>Settings</span>
+    </div>
+
     <!-- CRITICAL ANALYSIS (below) -->
     <div class="analysis-section">
       <h2>Critical Analysis</h2>
@@ -777,6 +786,154 @@
 </div>
 
 <div id="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(17,15,0,0.97);border:1px solid rgba(201,168,76,0.35);color:#e8c96a;padding:10px 20px;border-radius:99px;font-size:0.82rem;font-family:'DM Sans',sans-serif;z-index:9999;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;"></div>
+
+<!-- =============================================
+     SETTINGS OVERLAY
+============================================= -->
+<div class="settings-overlay" id="settingsOverlay" onclick="handleSettingsOverlayClick(event)">
+  <div class="settings-panel" id="settingsPanel">
+
+    <!-- Header -->
+    <div class="settings-header">
+      <div>
+        <div class="settings-title">⚙️ Settings</div>
+        <div class="settings-subtitle">Manage your SeWalk AI experience</div>
+      </div>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- User Card -->
+    <div class="settings-user-card" id="settingsUserCard">
+      <div class="settings-avatar" id="settingsAvatar">?</div>
+      <div class="settings-user-info">
+        <div class="settings-user-name" id="settingsUserName">Guest User</div>
+        <div class="settings-user-email" id="settingsUserEmail">Not signed in</div>
+      </div>
+      <button class="settings-upgrade-pill" onclick="closeSettings(); window.location.href='upgrade.html'">✦ Upgrade</button>
+    </div>
+
+    <!-- Sections -->
+    <div class="settings-body">
+
+      <!-- Personalisation -->
+      <div class="settings-section">
+        <div class="settings-section-title">🎨 Personalisation</div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Theme</div>
+            <div class="settings-row-desc">Switch between dark and light mode</div>
+          </div>
+          <div class="settings-theme-toggle">
+            <button class="theme-opt" id="themeOptDark" onclick="setTheme('dark')">🌙 Dark</button>
+            <button class="theme-opt" id="themeOptLight" onclick="setTheme('light')">☀️ Light</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Display Name</div>
+            <div class="settings-row-desc">How the AI addresses you</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input class="settings-input" id="displayNameInput" placeholder="Your name..." maxlength="30"/>
+            <button class="settings-save-btn" onclick="saveDisplayName()">Save</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- AI Memory -->
+      <div class="settings-section">
+        <div class="settings-section-title">🧠 AI Memory</div>
+
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Custom Memory</div>
+            <div class="settings-row-desc">Tell the AI things to always remember about you (e.g. "I'm a 17 year old preparing for JEE 2026")</div>
+          </div>
+          <textarea class="settings-textarea" id="customMemoryInput" placeholder="Add anything you want the AI to always know about you..." maxlength="500"></textarea>
+          <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+            <span class="settings-char-count" id="memoryCharCount">0 / 500</span>
+            <button class="settings-save-btn" onclick="saveCustomMemory()">Save Memory</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Clear All Sessions</div>
+            <div class="settings-row-desc">Delete all chat history across all personas</div>
+          </div>
+          <button class="settings-danger-btn" onclick="confirmClearSessions()">Clear All</button>
+        </div>
+
+      </div>
+
+      <!-- Account -->
+      <div class="settings-section">
+        <div class="settings-section-title">👤 Account</div>
+
+        <div class="settings-row" id="settingsSignInRow">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Sign In</div>
+            <div class="settings-row-desc">Sign in to save sessions and unlock features</div>
+          </div>
+          <button class="settings-save-btn" onclick="closeSettings(); openAuthModal()">Sign In</button>
+        </div>
+
+        <div class="settings-row" id="settingsSignOutRow" style="display:none;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Sign Out</div>
+            <div class="settings-row-desc">You'll lose access to saved sessions on this device</div>
+          </div>
+          <button class="settings-neutral-btn" onclick="authSignOut(); closeSettings()">Sign Out</button>
+        </div>
+
+        <div class="settings-row" id="settingsDeleteRow" style="display:none;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Delete Account</div>
+            <div class="settings-row-desc">Permanently delete your account and all data</div>
+          </div>
+          <button class="settings-danger-btn" onclick="confirmDeleteAccount()">Delete</button>
+        </div>
+
+      </div>
+
+      <!-- Upgrade -->
+      <div class="settings-section settings-upgrade-section" onclick="closeSettings(); window.location.href='upgrade.html'" style="cursor:pointer;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="settings-section-title" style="margin-bottom:4px;">✦ Upgrade Plan</div>
+            <div style="font-size:0.8rem;color:var(--muted);">Unlock Walk 2.0 Elite, image gen, and more</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
+      <!-- App Info -->
+      <div class="settings-section">
+        <div class="settings-section-title">ℹ️ About</div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">SeWalk AI</div>
+            <div class="settings-row-desc">Version 3.0 · Built by Soumyadip Bhatt · India 🇮🇳</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Links</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <a href="privacy.html" target="_blank" class="settings-link-btn">Privacy</a>
+            <a href="terms.html" target="_blank" class="settings-link-btn">Terms</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
