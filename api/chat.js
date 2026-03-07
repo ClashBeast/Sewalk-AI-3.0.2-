@@ -6,6 +6,7 @@ const ALLOWED_ORIGINS = [
   'https://sewalk-ai.vercel.app',
   'https://sewalk-3-0.vercel.app',
   'https://sewalk-ai-app.netlify.app',
+  'https://sewalk-ai-302.vercel.app',
   'https://sewalk-ai-0e0188.netlify.app',
   'https://sewalk-ai-c05935.netlify.app',
   'https://sewalk-ai.netlify.app',
