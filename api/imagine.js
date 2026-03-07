@@ -5,13 +5,14 @@ const ALLOWED_ORIGINS = [
   'https://sewalk-ultraai.vercel.app',
   'https://sewalk-ai.vercel.app',
   'https://se-walk-ai-2-0.vercel.app',
+  'https://sewalk-ai-302.vercel.app',
   'http://localhost:3000',
   'http://localhost:8888',
 ];
 
 const IMAGE_MODELS = {
   // Free — Gemini
-  'walk-fusion-pro':  { real: 'gemini-2.0-flash-preview-image-generation', route: 'gemini' },
+  'walk-fusion-pro':  { real: 'gemini-3.1-flash-image', route: 'gemini' },
   // Free — OpenRouter
   'walk-creata-v1':   { real: 'black-forest-labs/flux-1.1-pro',             route: 'openrouter' },
   'walk-dream':       { real: 'bytedance-seed/seedream-3.0',                route: 'openrouter' },
