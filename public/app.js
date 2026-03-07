@@ -2671,3 +2671,133 @@ document.addEventListener('click', (e) => {
     return resp;
   };
 })();
+
+// =============================================
+//  SETTINGS — SeWalk v3.0
+// =============================================
+
+function openSettings() {
+  const overlay = document.getElementById('settingsOverlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  refreshSettingsUI();
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay')?.classList.remove('open');
+}
+
+function handleSettingsOverlayClick(e) {
+  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+}
+
+function refreshSettingsUI() {
+  // User card
+  const avatar   = document.getElementById('settingsAvatar');
+  const name     = document.getElementById('settingsUserName');
+  const email    = document.getElementById('settingsUserEmail');
+  const signInRow  = document.getElementById('settingsSignInRow');
+  const signOutRow = document.getElementById('settingsSignOutRow');
+  const deleteRow  = document.getElementById('settingsDeleteRow');
+
+  if (currentUser) {
+    const initial = (currentUser.user_metadata?.full_name || currentUser.email || '?')[0].toUpperCase();
+    if (avatar)  avatar.textContent  = initial;
+    if (name)    name.textContent    = localStorage.getItem('sewalk-display-name') || currentUser.user_metadata?.full_name || 'User';
+    if (email)   email.textContent   = currentUser.email;
+    if (signInRow)  signInRow.style.display  = 'none';
+    if (signOutRow) signOutRow.style.display = 'flex';
+    if (deleteRow)  deleteRow.style.display  = 'flex';
+  } else {
+    if (avatar)  avatar.textContent  = '?';
+    if (name)    name.textContent    = 'Guest User';
+    if (email)   email.textContent   = 'Not signed in';
+    if (signInRow)  signInRow.style.display  = 'flex';
+    if (signOutRow) signOutRow.style.display = 'none';
+    if (deleteRow)  deleteRow.style.display  = 'none';
+  }
+
+  // Restore display name input
+  const displayInput = document.getElementById('displayNameInput');
+  if (displayInput) displayInput.value = localStorage.getItem('sewalk-display-name') || '';
+
+  // Restore memory input
+  const memInput = document.getElementById('customMemoryInput');
+  const memCount = document.getElementById('memoryCharCount');
+  const saved = localStorage.getItem('sewalk-custom-memory') || '';
+  if (memInput) {
+    memInput.value = saved;
+    memInput.addEventListener('input', () => {
+      if (memCount) memCount.textContent = `${memInput.value.length} / 500`;
+    });
+  }
+  if (memCount) memCount.textContent = `${saved.length} / 500`;
+
+  // Theme buttons
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.getElementById('themeOptDark')?.classList.toggle('active', currentTheme !== 'light');
+  document.getElementById('themeOptLight')?.classList.toggle('active', currentTheme === 'light');
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('sewalk-theme', theme);
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) themeBtn.textContent = theme === 'light' ? '☀️' : '🌙';
+  document.getElementById('themeOptDark')?.classList.toggle('active', theme !== 'light');
+  document.getElementById('themeOptLight')?.classList.toggle('active', theme === 'light');
+}
+
+function saveDisplayName() {
+  const val = document.getElementById('displayNameInput')?.value.trim();
+  if (!val) return;
+  localStorage.setItem('sewalk-display-name', val);
+  showToast('✅ Display name saved!');
+}
+
+function saveCustomMemory() {
+  const val = document.getElementById('customMemoryInput')?.value.trim();
+  localStorage.setItem('sewalk-custom-memory', val || '');
+  showToast(val ? '🧠 Memory saved!' : '🧠 Memory cleared');
+}
+
+function confirmClearSessions() {
+  if (!confirm('Clear all chat sessions? This cannot be undone.')) return;
+  localStorage.removeItem('sewalk-sessions');
+  showToast('🗑️ All sessions cleared');
+  closeSettings();
+  location.reload();
+}
+
+function confirmDeleteAccount() {
+  if (!currentUser) return;
+  if (!confirm('Permanently delete your account and all data? This cannot be undone.')) return;
+  _supabase?.auth.admin?.deleteUser(currentUser.id).catch(() => {});
+  _supabase?.auth.signOut();
+  localStorage.clear();
+  showToast('Account deleted');
+  closeSettings();
+}
+
+// Inject custom memory into every API call
+(function patchForMemory() {
+  const _origFetch = window.fetch;
+  window.fetch = function(url, options) {
+    if (typeof url === 'string' && url.includes('/api/chat') && options?.body) {
+      try {
+        const body = JSON.parse(options.body);
+        const memory = localStorage.getItem('sewalk-custom-memory');
+        const displayName = localStorage.getItem('sewalk-display-name');
+        if (memory || displayName) {
+          const memNote = [
+            displayName ? `The user's name is ${displayName}.` : '',
+            memory ? `Always remember: ${memory}` : ''
+          ].filter(Boolean).join(' ');
+          body.system = (body.system || '') + `\n\n[User context: ${memNote}]`;
+          options = { ...options, body: JSON.stringify(body) };
+        }
+      } catch(e) {}
+    }
+    return _origFetch.call(this, url, options);
+  };
+})();
