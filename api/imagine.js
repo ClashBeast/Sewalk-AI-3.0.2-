@@ -1,4 +1,5 @@
-// SeWalk Creative Studio — Image Generation API v2
+// SeWalk Creative Studio — Image Generation API v3
+// OpenRouter uses /chat/completions with modalities:["image"] — NOT /images/generations
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
 const ALLOWED_ORIGINS = [
@@ -12,10 +13,10 @@ const ALLOWED_ORIGINS = [
 ];
 
 const IMAGE_MODELS = {
-  // ── FREE ──────────────────────────────────────────────────────
+  // ── FREE ──────────────────────────────────────────────────────────────────
   'walk-fusion-pro': {
-    real: 'gemini-3.1-flash-image-preview',
-    route: 'gemini',
+    real: 'google/gemini-3.1-flash-image-preview', // Nano Banana 2 — via OpenRouter FREE
+    route: 'openrouter',
     free: true,
   },
   'walk-creata-v1': {
@@ -44,48 +45,22 @@ const IMAGE_MODELS = {
     free: true,
   },
 
-  // ── PAID (locked) ─────────────────────────────────────────────
-  'walk-vision-max': { real: 'black-forest-labs/flux.2-max',          route: 'openrouter', free: false },
-  'walk-art-pro':    { real: 'black-forest-labs/flux.2-pro',          route: 'openrouter', free: false },
-  'walk-gpt-imagine':{ real: 'openai/gpt-5-image-mini',               route: 'openrouter', free: false },
-  'walk-gpt-ultra':  { real: 'openai/gpt-5-image',                    route: 'openrouter', free: false },
-  'walk-gem-vision': { real: 'google/gemini-3-pro-image-preview',     route: 'openrouter', free: false },
-  'walk-qwen-art':   { real: 'Qwen/Qwen-Image',                       route: 'together',   free: false },
-  'walk-wan-video':  { real: 'Wan-AI/Wan2.6-image',                   route: 'together',   free: false },
+  // ── PAID (locked) ─────────────────────────────────────────────────────────
+  'walk-vision-max':  { real: 'black-forest-labs/flux.2-max',          route: 'openrouter', free: false },
+  'walk-art-pro':     { real: 'black-forest-labs/flux.2-pro',          route: 'openrouter', free: false },
+  'walk-gpt-imagine': { real: 'openai/gpt-5-image-mini',               route: 'openrouter', free: false },
+  'walk-gpt-ultra':   { real: 'openai/gpt-5-image',                    route: 'openrouter', free: false },
+  'walk-gem-vision':  { real: 'google/gemini-3-pro-image-preview',     route: 'openrouter', free: false },
+  'walk-qwen-art':    { real: 'Qwen/Qwen-Image',                       route: 'together',   free: false },
+  'walk-wan-video':   { real: 'Wan-AI/Wan2.6-image',                   route: 'together',   free: false },
 };
 
-// ── Gemini image gen ──────────────────────────────────────────
-async function generateGemini(prompt) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-    }),
-  });
-
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data?.error?.message || `Gemini error ${resp.status}`);
-
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  const imgPart = parts.find(p => p.inlineData?.data);
-  if (imgPart) {
-    return { type: 'base64', data: imgPart.inlineData.data, mime: imgPart.inlineData.mimeType || 'image/png' };
-  }
-  throw new Error('Gemini returned no image');
-}
-
-// ── OpenRouter image gen ──────────────────────────────────────
+// ── OpenRouter: /chat/completions with modalities:["image"] ──────────────────
 async function generateOpenRouter(modelId, prompt) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in Vercel environment');
 
-  const resp = await fetch('https://openrouter.ai/api/v1/images/generations', {
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -93,23 +68,60 @@ async function generateOpenRouter(modelId, prompt) {
       'HTTP-Referer': 'https://sewalk-ultraai.vercel.app',
       'X-Title': 'SeWalk Creative Studio',
     },
-    body: JSON.stringify({ model: modelId, prompt, n: 1, size: '1024x1024' }),
+    body: JSON.stringify({
+      model: modelId,
+      messages: [{ role: 'user', content: prompt }],
+      modalities: ['image', 'text'],
+    }),
   });
 
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data?.error?.message || data?.error || `OpenRouter error ${resp.status}`);
+  const text = await resp.text();
 
-  const url = data?.data?.[0]?.url;
-  if (url) return { type: 'url', url };
-  const b64 = data?.data?.[0]?.b64_json;
-  if (b64) return { type: 'base64', data: b64, mime: 'image/png' };
-  throw new Error('OpenRouter returned no image');
+  let data;
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`OpenRouter returned non-JSON: ${text.slice(0, 120)}`); }
+
+  if (!resp.ok) {
+    throw new Error(data?.error?.message || data?.error || `OpenRouter error ${resp.status}`);
+  }
+
+  // Images come back in choices[0].message.content as array of parts
+  const content = data?.choices?.[0]?.message?.content;
+
+  // content can be string or array
+  if (Array.isArray(content)) {
+    const imgPart = content.find(p => p.type === 'image_url');
+    if (imgPart?.image_url?.url) {
+      const url = imgPart.image_url.url;
+      if (url.startsWith('data:')) {
+        // base64 data URL
+        const [meta, b64] = url.split(',');
+        const mime = meta.replace('data:', '').replace(';base64', '');
+        return { type: 'base64', data: b64, mime };
+      }
+      return { type: 'url', url };
+    }
+  }
+
+  // Some models return images field directly
+  const images = data?.choices?.[0]?.message?.images;
+  if (images?.[0]) {
+    const img = images[0];
+    if (img.startsWith('data:')) {
+      const [meta, b64] = img.split(',');
+      const mime = meta.replace('data:', '').replace(';base64', '');
+      return { type: 'base64', data: b64, mime };
+    }
+    return { type: 'url', url: img };
+  }
+
+  throw new Error(`No image in OpenRouter response. Content: ${JSON.stringify(content).slice(0,200)}`);
 }
 
-// ── Together AI image gen ─────────────────────────────────────
+// ── Together AI: /images/generations ────────────────────────────────────────
 async function generateTogether(modelId, prompt) {
   const apiKey = process.env.TOGETHER_API_KEY;
-  if (!apiKey) throw new Error('TOGETHER_API_KEY not set');
+  if (!apiKey) throw new Error('TOGETHER_API_KEY not set in Vercel environment — go to Vercel → Settings → Environment Variables and add it');
 
   const resp = await fetch('https://api.together.xyz/v1/images/generations', {
     method: 'POST',
@@ -128,17 +140,21 @@ async function generateTogether(modelId, prompt) {
     }),
   });
 
-  const data = await resp.json();
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`Together returned non-JSON: ${text.slice(0,120)}`); }
+
   if (!resp.ok) throw new Error(data?.error?.message || data?.error || `Together error ${resp.status}`);
 
   const b64 = data?.data?.[0]?.b64_json;
   if (b64) return { type: 'base64', data: b64, mime: 'image/png' };
   const url = data?.data?.[0]?.url;
   if (url) return { type: 'url', url };
-  throw new Error('Together returned no image');
+  throw new Error('Together returned no image data');
 }
 
-// ── Main handler ──────────────────────────────────────────────
+// ── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   const origin = req.headers['origin'] || req.headers['referer'] || '';
   const isAllowed = ALLOWED_ORIGINS.some(o => origin.startsWith(o));
@@ -160,9 +176,8 @@ export default async function handler(req, res) {
     if (!cfg.free) return res.status(403).json({ upgradeRequired: true });
 
     let result;
-    if      (cfg.route === 'gemini')      result = await generateGemini(prompt);
-    else if (cfg.route === 'together')    result = await generateTogether(cfg.real, prompt);
-    else                                  result = await generateOpenRouter(cfg.real, prompt);
+    if      (cfg.route === 'together')   result = await generateTogether(cfg.real, prompt);
+    else                                 result = await generateOpenRouter(cfg.real, prompt);
 
     return res.status(200).json(result);
 
