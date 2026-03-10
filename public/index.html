@@ -819,10 +819,17 @@
     <!-- Sections -->
     <div class="settings-body">
 
-      <!-- Personalisation -->
+      <!-- ═══════════════════════════════════════════════════════════
+     REPLACE the existing <!-- Personalisation --> section
+     in index.html with this entire block
+     (from <div class="settings-section"> to its closing </div>)
+     ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Advanced Personalisation -->
       <div class="settings-section">
         <div class="settings-section-title">🎨 Personalisation</div>
 
+        <!-- Theme -->
         <div class="settings-row">
           <div class="settings-row-info">
             <div class="settings-row-label">Theme</div>
@@ -834,6 +841,7 @@
           </div>
         </div>
 
+        <!-- Display Name -->
         <div class="settings-row">
           <div class="settings-row-info">
             <div class="settings-row-label">Display Name</div>
@@ -843,6 +851,106 @@
             <input class="settings-input" id="displayNameInput" placeholder="Your name..." maxlength="30"/>
             <button class="settings-save-btn" onclick="saveDisplayName()">Save</button>
           </div>
+        </div>
+
+        <!-- Response Language -->
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Response Language</div>
+            <div class="settings-row-desc">AI will reply in your chosen language</div>
+          </div>
+          <select class="settings-select" id="responseLangSelect" onchange="savePersonalitySettings()">
+            <option value="">Auto (Default)</option>
+            <option value="English">English</option>
+            <option value="Hindi">हिंदी</option>
+            <option value="Bengali">বাংলা</option>
+            <option value="Tamil">தமிழ்</option>
+            <option value="Telugu">తెలుగు</option>
+            <option value="Marathi">मराठी</option>
+            <option value="Gujarati">ગુજરાતી</option>
+            <option value="Kannada">ಕನ್ನಡ</option>
+            <option value="Malayalam">മലയാളം</option>
+            <option value="Spanish">Español</option>
+            <option value="French">Français</option>
+            <option value="Japanese">日本語</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- AI Style — new section -->
+      <div class="settings-section">
+        <div class="settings-section-title">🤖 AI Style</div>
+
+        <!-- Tone & Vibe -->
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Tone & Vibe</div>
+            <div class="settings-row-desc">Choose how the AI sounds when it talks to you</div>
+          </div>
+          <div class="settings-chip-group" id="toneChipGroup">
+            <button class="settings-chip active" data-value="default"      onclick="selectChip('toneChipGroup','default',      this)">🤝 Default</button>
+            <button class="settings-chip"        data-value="professional" onclick="selectChip('toneChipGroup','professional', this)">💼 Professional</button>
+            <button class="settings-chip"        data-value="sarcastic"    onclick="selectChip('toneChipGroup','sarcastic',    this)">😏 Sarcastic</button>
+            <button class="settings-chip"        data-value="genz"         onclick="selectChip('toneChipGroup','genz',         this)">🔥 Gen Z Hype</button>
+            <button class="settings-chip"        data-value="minimalist"   onclick="selectChip('toneChipGroup','minimalist',   this)">🧊 Minimalist</button>
+          </div>
+        </div>
+
+        <!-- Response Length -->
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Response Length</div>
+            <div class="settings-row-desc">How much detail do you want in replies?</div>
+          </div>
+          <div class="settings-chip-group" id="lengthChipGroup">
+            <button class="settings-chip active" data-value="balanced" onclick="selectChip('lengthChipGroup','balanced', this)">⚖️ Balanced</button>
+            <button class="settings-chip"        data-value="short"    onclick="selectChip('lengthChipGroup','short',    this)">⚡ Short & Punchy</button>
+            <button class="settings-chip"        data-value="detailed" onclick="selectChip('lengthChipGroup','detailed', this)">📖 Detailed & Deep</button>
+          </div>
+        </div>
+
+        <!-- Emoji Density -->
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Emoji Density</div>
+            <div class="settings-row-desc">How many emojis should the AI use?</div>
+          </div>
+          <div class="settings-chip-group" id="emojiChipGroup">
+            <button class="settings-chip active" data-value="normal" onclick="selectChip('emojiChipGroup','normal', this)">😊 Normal</button>
+            <button class="settings-chip"        data-value="lots"   onclick="selectChip('emojiChipGroup','lots',   this)">🎉🔥✨ Max Vibes</button>
+            <button class="settings-chip"        data-value="none"   onclick="selectChip('emojiChipGroup','none',   this)">🚫 No Emojis</button>
+          </div>
+        </div>
+
+        <!-- Creativity / Temperature -->
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Creativity</div>
+            <div class="settings-row-desc">Low = factual & focused · High = wild & imaginative</div>
+          </div>
+          <div style="width:100%;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:0.72rem;color:var(--muted);">🧊 Factual</span>
+              <span class="creativity-label" id="creativityLabel">Balanced (0.7)</span>
+              <span style="font-size:0.72rem;color:var(--muted);">🔥 Wild</span>
+            </div>
+            <input
+              type="range" min="0" max="10" value="7" step="1"
+              class="settings-slider" id="creativitySlider"
+              oninput="updateCreativityLabel(this.value)"
+              onchange="savePersonalitySettings()"
+            />
+            <div class="slider-ticks">
+              <span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save button -->
+        <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+          <button class="settings-save-btn" onclick="savePersonalitySettings(true)">Apply Style ✦</button>
         </div>
 
       </div>
