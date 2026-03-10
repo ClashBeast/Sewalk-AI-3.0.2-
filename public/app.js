@@ -2801,3 +2801,201 @@ function confirmDeleteAccount() {
     return _origFetch.call(this, url, options);
   };
 })();
+// ═══════════════════════════════════════════════════════════
+//  SeWalk AI — Advanced Personality Settings
+//  ADD THIS to the bottom of your app.js
+// ═══════════════════════════════════════════════════════════
+
+// ── Personality settings storage keys ────────────────────────
+const PS_KEYS = {
+  tone:     'sewalk-ps-tone',
+  length:   'sewalk-ps-length',
+  emoji:    'sewalk-ps-emoji',
+  temp:     'sewalk-ps-temp',
+  lang:     'sewalk-ps-lang',
+};
+
+// ── Tone → system prompt instruction ─────────────────────────
+const TONE_INSTRUCTIONS = {
+  default:      '',
+  professional: 'Always respond in a professional, formal tone. Be precise, structured, and business-like.',
+  sarcastic:    'Respond with a dry, witty, and lightly sarcastic tone. Be funny but still helpful.',
+  genz:         'Talk like a Gen Z person. Use current slang, be hype, use words like "lowkey", "slay", "no cap", "bussin", "fr fr". Keep the energy high.',
+  minimalist:   'Be extremely concise. No fluff. Only the essential information. Short sentences.',
+};
+
+const LENGTH_INSTRUCTIONS = {
+  balanced: '',
+  short:    'Keep all responses short and punchy. Maximum 3–4 sentences unless the user explicitly asks for more.',
+  detailed: 'Always give thorough, detailed, well-explained answers. Go deep on every topic.',
+};
+
+const EMOJI_INSTRUCTIONS = {
+  normal: '',
+  lots:   'Use lots of emojis throughout your responses to make them expressive and fun 🔥✨💯',
+  none:   'Never use any emojis in your responses.',
+};
+
+// ── Build the personality suffix to inject into system prompts ─
+function buildPersonalitySuffix() {
+  const tone   = localStorage.getItem(PS_KEYS.tone)   || 'default';
+  const length = localStorage.getItem(PS_KEYS.length) || 'balanced';
+  const emoji  = localStorage.getItem(PS_KEYS.emoji)  || 'normal';
+  const lang   = localStorage.getItem(PS_KEYS.lang)   || '';
+
+  const parts = [];
+  if (TONE_INSTRUCTIONS[tone])     parts.push(TONE_INSTRUCTIONS[tone]);
+  if (LENGTH_INSTRUCTIONS[length]) parts.push(LENGTH_INSTRUCTIONS[length]);
+  if (EMOJI_INSTRUCTIONS[emoji])   parts.push(EMOJI_INSTRUCTIONS[emoji]);
+  if (lang) parts.push(`Always respond in ${lang}, regardless of what language the user writes in.`);
+
+  return parts.length ? '\n\n[Style instructions: ' + parts.join(' ') + ']' : '';
+}
+
+// ── Get temperature value (0.0 – 1.0) from slider (0–10) ─────
+function getTemperature() {
+  const raw = parseInt(localStorage.getItem(PS_KEYS.temp) || '7');
+  return (raw / 10).toFixed(1);
+}
+
+// ── Chip selector ─────────────────────────────────────────────
+function selectChip(groupId, value, btn) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  group.querySelectorAll('.settings-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  // Don't save yet — wait for Apply button
+}
+
+// ── Creativity slider label ───────────────────────────────────
+function updateCreativityLabel(val) {
+  const labels = {
+    0: 'Ultra Factual (0.0)',
+    1: 'Very Focused (0.1)',
+    2: 'Focused (0.2)',
+    3: 'Grounded (0.3)',
+    4: 'Mostly Factual (0.4)',
+    5: 'Balanced (0.5)',
+    6: 'Slightly Creative (0.6)',
+    7: 'Balanced (0.7)',
+    8: 'Creative (0.8)',
+    9: 'Very Creative (0.9)',
+    10: '🔥 Max Wild (1.0)',
+  };
+  const el = document.getElementById('creativityLabel');
+  if (el) el.textContent = labels[val] || `(${(val/10).toFixed(1)})`;
+
+  // Update slider fill
+  const slider = document.getElementById('creativitySlider');
+  if (slider) slider.style.setProperty('--pct', (val * 10) + '%');
+}
+
+// ── Save all personality settings ────────────────────────────
+function savePersonalitySettings(showToastMsg = false) {
+  // Tone
+  const toneGroup = document.getElementById('toneChipGroup');
+  if (toneGroup) {
+    const active = toneGroup.querySelector('.settings-chip.active');
+    if (active) localStorage.setItem(PS_KEYS.tone, active.dataset.value);
+  }
+
+  // Length
+  const lengthGroup = document.getElementById('lengthChipGroup');
+  if (lengthGroup) {
+    const active = lengthGroup.querySelector('.settings-chip.active');
+    if (active) localStorage.setItem(PS_KEYS.length, active.dataset.value);
+  }
+
+  // Emoji
+  const emojiGroup = document.getElementById('emojiChipGroup');
+  if (emojiGroup) {
+    const active = emojiGroup.querySelector('.settings-chip.active');
+    if (active) localStorage.setItem(PS_KEYS.emoji, active.dataset.value);
+  }
+
+  // Temperature
+  const slider = document.getElementById('creativitySlider');
+  if (slider) localStorage.setItem(PS_KEYS.temp, slider.value);
+
+  // Language
+  const langSelect = document.getElementById('responseLangSelect');
+  if (langSelect) localStorage.setItem(PS_KEYS.lang, langSelect.value);
+
+  if (showToastMsg) showToast('✦ AI Style applied!');
+}
+
+// ── Load saved settings into the UI ──────────────────────────
+function loadPersonalitySettingsUI() {
+  // Tone chips
+  const tone = localStorage.getItem(PS_KEYS.tone) || 'default';
+  const toneGroup = document.getElementById('toneChipGroup');
+  if (toneGroup) {
+    toneGroup.querySelectorAll('.settings-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.value === tone);
+    });
+  }
+
+  // Length chips
+  const length = localStorage.getItem(PS_KEYS.length) || 'balanced';
+  const lengthGroup = document.getElementById('lengthChipGroup');
+  if (lengthGroup) {
+    lengthGroup.querySelectorAll('.settings-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.value === length);
+    });
+  }
+
+  // Emoji chips
+  const emoji = localStorage.getItem(PS_KEYS.emoji) || 'normal';
+  const emojiGroup = document.getElementById('emojiChipGroup');
+  if (emojiGroup) {
+    emojiGroup.querySelectorAll('.settings-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.value === emoji);
+    });
+  }
+
+  // Slider
+  const temp = parseInt(localStorage.getItem(PS_KEYS.temp) || '7');
+  const slider = document.getElementById('creativitySlider');
+  if (slider) {
+    slider.value = temp;
+    slider.style.setProperty('--pct', (temp * 10) + '%');
+    updateCreativityLabel(temp);
+  }
+
+  // Language
+  const lang = localStorage.getItem(PS_KEYS.lang) || '';
+  const langSelect = document.getElementById('responseLangSelect');
+  if (langSelect) langSelect.value = lang;
+}
+
+// ── Patch refreshSettingsUI to also load personality settings ─
+const _origRefreshSettingsUI = window.refreshSettingsUI || refreshSettingsUI;
+window.refreshSettingsUI = function() {
+  _origRefreshSettingsUI();
+  loadPersonalitySettingsUI();
+};
+
+// ── Patch the fetch interceptor to inject personality into prompts ─
+// This extends the existing patchForMemory fetch patch
+(function patchForPersonality() {
+  const _origFetch = window.fetch;
+  window.fetch = function(url, options) {
+    if (typeof url === 'string' && url.includes('/api/chat') && options?.body) {
+      try {
+        const body = JSON.parse(options.body);
+
+        // Inject personality suffix into system prompt
+        const suffix = buildPersonalitySuffix();
+        if (suffix && body.system) {
+          body.system = body.system + suffix;
+        }
+
+        // Inject temperature
+        body.temperature = parseFloat(getTemperature());
+
+        options = { ...options, body: JSON.stringify(body) };
+      } catch(e) {}
+    }
+    return _origFetch.call(this, url, options);
+  };
+})();
